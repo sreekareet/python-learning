@@ -58,3 +58,20 @@ class FastKVSClient:
         if response != "OK":
             raise FastKVSProtocolError(f"unexpected response: {response}")
         return True
+
+    def stats(self):
+        try:
+            self.socket.sendall("STATS\n".encode("utf-8"))
+            response = self.socket.recv(4096).decode("utf-8").strip()
+            
+            result = {}
+            for line in response.split("\n"):
+                line = line.strip()
+                if ":" in line:
+                    key, value = line.split(":", 1)
+                    result[key.strip()] = value.strip()
+            return result
+        except socket.timeout:
+            raise FastKVSTimeoutError("server did not respond in time")
+        except OSError:
+            raise FastKVSConnectionError("connection lost")
