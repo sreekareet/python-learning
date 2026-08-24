@@ -17,26 +17,44 @@ class FastKVSClient:
         return False
 
     def connect(self):
-        print(f"connecting to {self.host}:{self.port}")
-        # real socket code comes next week
-        pass
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(self.timeout)
+            self.socket.connect((self.host, self.port))
+        except ConnectionRefusedError:
+            raise FastKVSConnectionError(f"could not connect to {self.host}:{self.port} - is the server running?")
+        except socket.timeout:
+            raise FastKVSTimeoutError(f"connection timed out after {self.timeout}s")
 
     def close(self):
-        print("closing connection")
-        # real socket cleanup comes next week
-        pass
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+
+    def send_command(self, command):
+        try:
+            self.socket.sendall((command + "\n").encode("utf-8"))
+            response = self.socket.recv(4096).decode("utf-8").strip()
+            return response
+        except socket.timeout:
+            raise FastKVSTimeoutError("server did not respond in time")
+        except OSError:
+            raise FastKVSConnectionError("connection lost")            
 
     def get(self, key):
-        print(f"GET {key}")
-        # real implementation comes next week
-        pass
+        response = self.send_command(f"GET {key}")
+        if response == "NULL":
+            return None
+        return response
 
     def set(self, key, value):
-        print(f"SET {key} {value}")
-        # real implementation comes next week
-        pass
+        response = self.send_command(f"SET {key} {value}")
+        if response != "OK":
+            raise FastKVSProtocolError(f"unexpected response: {response}")
+        return True
 
     def delete(self, key):
-        print(f"DEL {key}")
-        # real implementation comes next week
-        pass
+        response = self.send_command(f"DEL {key}")
+        if response != "OK":
+            raise FastKVSProtocolError(f"unexpected response: {response}")
+        return True
