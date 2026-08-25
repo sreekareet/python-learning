@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from client import FastKVSClient
 from exceptions import FastKVSConnectionError, FastKVSError
 

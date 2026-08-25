@@ -1,5 +1,9 @@
 import socket
+import time
+import logging
 from exceptions import FastKVSConnectionError, FastKVSTimeoutError, FastKVSProtocolError, FastKVSKeyError
+
+logger = logging.getLogger(__name__)
 
 class FastKVSClient:
     def __init__(self, host="127.0.0.1", port=7379, timeout=30):
@@ -16,15 +20,23 @@ class FastKVSClient:
         self.close()
         return False
 
-    def connect(self):
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.settimeout(self.timeout)
-            self.socket.connect((self.host, self.port))
-        except ConnectionRefusedError:
-            raise FastKVSConnectionError(f"could not connect to {self.host}:{self.port} - is the server running?")
-        except socket.timeout:
-            raise FastKVSTimeoutError(f"connection timed out after {self.timeout}s")
+    def connect(self, retries=3, delay=2):
+        for attempt in range(1, retries + 1):
+            try:
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.settimeout(self.timeout)
+                self.socket.connect((self.host, self.port))
+                logger.info(f"connected on attempt {attempt}")
+                return
+            except ConnectionRefusedError:
+                logger.warning(f"attempt {attempt} failed - server not available")
+                if attempt < retries:
+                    time.sleep(delay)
+                self.socket = None
+        
+        raise FastKVSConnectionError(
+            f"could not connect to {self.host}:{self.port} after {retries} attempts"
+    )
 
     def close(self):
         if self.socket:
