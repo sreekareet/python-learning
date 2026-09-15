@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-09-15T11:00:21.854877",
+  "config": {
+    "num_threads": 10,
+    "num_ops": 100,
+    "total_operations": 2000
+  },
+  "results": {
+    "total_time_ms": 436.36,
+    "operations": 1000,
+    "min_ms": 0.39,
+    "max_ms": 60.01,
+    "avg_ms": 4.17,
+    "p50_ms": 2.89,
+    "p99_ms": 56.92
+  }
+}

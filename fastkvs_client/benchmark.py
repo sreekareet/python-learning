@@ -1,6 +1,8 @@
 import threading
 import time
 import queue
+import json
+from datetime import datetime
 from client import FastKVSClient
 from exceptions import FastKVSError
 
@@ -24,6 +26,33 @@ def worker(thread_id, num_ops, results_queue):
     
     except FastKVSError as e:
         results_queue.put({"thread_id": thread_id, "latencies": [], "error": str(e)})
+
+def save_results(results, num_threads, num_ops, total_time, all_latencies):
+    output = {
+        "timestamp": datetime.now().isoformat(),
+        "config": {
+            "num_threads": num_threads,
+            "num_ops": num_ops,
+            "total_operations": num_threads * num_ops * 2
+        },
+        "results": {
+            "total_time_ms": round(total_time, 2),
+            "operations": len(all_latencies),
+            "min_ms": round(min(all_latencies), 2),
+            "max_ms": round(max(all_latencies), 2),
+            "avg_ms": round(sum(all_latencies) / len(all_latencies), 2),
+            "p50_ms": round(all_latencies[int(len(all_latencies) * 0.50)], 2),
+            "p99_ms": round(all_latencies[int(len(all_latencies) * 0.99)], 2)
+        }
+    }
+    
+    filename = f"benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    
+    with open(filename, "w") as f:
+        json.dump(output, f, indent=2)
+    
+    print(f"\nresults saved to {filename}")
+    return filename
 
 def run_benchmark(num_threads=3, num_ops=10):
     print(f"\n=== FastKVS Benchmark ===")
@@ -63,6 +92,8 @@ def run_benchmark(num_threads=3, num_ops=10):
         print(f"avg latency:    {sum(all_latencies)/total:.2f}ms")
         print(f"p50 latency:    {all_latencies[int(total*0.50)]:.2f}ms")
         print(f"p99 latency:    {all_latencies[int(total*0.99)]:.2f}ms")
+
+        save_results(None, num_threads, num_ops, total_time, all_latencies)
 
 if __name__ == "__main__":
     run_benchmark(num_threads=10, num_ops=100)
